@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Painkiller Recovery Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>💊 Painkiller Recovery Predictor</h1>
+            <p class="subtitle">AI-powered painkiller dosage analysis with recovery insights</p>
+        </header>
+
+        <main>
+            <form id="predict-form" class="card form-card">
+                <label for="dosage">Enter Painkiller Dosage (mg)</label>
+                <input type="number" id="dosage" name="dosage" min="0" max="200" required>
+                <button type="submit">Predict</button>
+            </form>
+
+            <div id="result" class="card result-card hidden"></div>
+
+            <div class="card chart-card">
+                <h2>Painkiller Dosage vs Recovery Curve</h2>
+                <canvas id="recoveryChart"></canvas>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Painkiller Recovery AI | Polynomial Regression Dashboard</p>
+        </footer>
+    </div>
+
+    <script>
+        let chart;
+
+        document.getElementById("predict-form").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const dosage = document.getElementById("dosage").value;
+            const response = await fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ dosage: dosage })
+            });
+            const data = await response.json();
+
+            const resultBox = document.getElementById("result");
+            resultBox.classList.remove("hidden");
+            resultBox.innerHTML = `
+                <h2>Prediction Result</h2>
+                <p><strong>Recovery Rate:</strong> ${data.recovery_rate.toFixed(2)}%</p>
+                <p><strong>Assessment:</strong> ${data.threshold}</p>
+            `;
+
+            updateChart(data.curve_x, data.curve_y);
+        });
+
+        function updateChart(xValues, yValues) {
+            const ctx = document.getElementById("recoveryChart").getContext("2d");
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: "Predicted Recovery Rate",
+                        data: yValues,
+                        borderColor: "#27ae60",
+                        backgroundColor: "rgba(39,174,96,0.1)",
+                        fill: true,
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true },
+                        annotation: {
+                            annotations: {
+                                underdose: {
+                                    type: 'box',
+                                    xMin: 0,
+                                    xMax: 30,
+                                    backgroundColor: 'rgba(255,0,0,0.1)',
+                                    label: { content: 'Underdose Zone', enabled: true }
+                                },
+                                overdose: {
+                                    type: 'box',
+                                    xMin: 120,
+                                    xMax: 200,
+                                    backgroundColor: 'rgba(255,165,0,0.1)',
+                                    label: { content: 'Overdose Zone', enabled: true }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: "Painkiller Dosage (mg)" } },
+                        y: { title: { display: true, text: "Recovery Rate (%)" }, min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
